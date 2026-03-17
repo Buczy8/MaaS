@@ -123,7 +123,7 @@
       lineinfile:
         path: /etc/zabbix/zabbix_agent2.conf
         regexp: '^Server='
-        line: 'Server=127.0.0.1,172.17.0.1'
+        line: 'Server=127.0.0.1,172.16.0.0/12'
 
     - name: Finalny restart i wlaczenie Zabbix Agent 2
       systemd:
