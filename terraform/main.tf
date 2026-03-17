@@ -46,7 +46,7 @@ resource "azurerm_public_ip" "myterraformpublicip" {
   name                = "group8PublicIP"
   location            = azurerm_resource_group.myterraformgroup.location
   resource_group_name = azurerm_resource_group.myterraformgroup.name
-  allocation_method   = "Static" # Zmieniono na Static, aby IP było widoczne od razu
+  allocation_method   = "Static"
 
   tags = {
     environment = "Terraform Demo"
@@ -173,4 +173,19 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
 
 output "public_ip_address" {
   value = azurerm_public_ip.myterraformpublicip.ip_address
+}
+
+# 10. Generowanie pliku inventory dla Ansible
+resource "local_file" "ansible_inventory" {
+  content = <<-EOT
+  [azure_vm]
+  ${azurerm_public_ip.myterraformpublicip.ip_address}
+
+  [azure_vm:vars]
+  ansible_user=group8
+  ansible_ssh_private_key_file=../terraform/.ssh/id_rsa
+  ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+  EOT
+
+  filename = "../ansible/inventory.ini"
 }
