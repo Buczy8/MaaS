@@ -183,7 +183,7 @@ resource "local_file" "ansible_inventory" {
 
   [azure_vm:vars]
   ansible_user=group8
-  ansible_ssh_private_key_file=../terraform/.ssh/id_rsa
+  ansible_ssh_private_key_file=${abspath("${path.module}/.ssh/id_rsa")}
   ansible_ssh_common_args='-o StrictHostKeyChecking=no'
   EOT
 
