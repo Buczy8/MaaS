@@ -91,6 +91,12 @@
         dest: /opt/zabbix/docker-compose.yml
         mode: '0644'
 
+    - name: Przeslanie pliku .env z haslami
+      copy:
+        src: ../docker/.env
+        dest: /opt/zabbix/.env
+        mode: '0600'
+
     - name: Uruchomienie infrastruktury Zabbix
       community.docker.docker_compose_v2:
           project_src: /opt/zabbix
