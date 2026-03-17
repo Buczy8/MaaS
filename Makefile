@@ -1,3 +1,5 @@
+provision:
+.PHONY: help init tf-init plan apply provision deploy status ping destroy clean
 SHELL := /bin/bash
 
 TF_DIR := terraform
@@ -5,7 +7,6 @@ ANSIBLE_DIR := ansible
 DOCKER_DIR := docker
 ANSIBLE_PLAYBOOK := $(ANSIBLE_DIR)/setup.yml
 ANSIBLE_INVENTORY := $(ANSIBLE_DIR)/inventory.ini
-
 .PHONY: help init tf-init plan apply provision deploy status ping destroy clean
 
 help:
