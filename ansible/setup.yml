@@ -1,0 +1,135 @@
+---
+- name: Wdrozenie Zabbixa na platformie Docker z plikiem Swap i natywnym Agentem
+  hosts: azure_vm
+  become: yes # Ansible wykona te komendy jako administrator (root)
+  tasks:
+
+    # --- 1. SEKCJA PAMIĘCI SWAP ---
+    - name: Sprawdzenie, czy plik swap juz istnieje
+      stat:
+        path: /swapfile
+      register: swap_stat
+
+    - name: Utworzenie pustego pliku 2GB na SWAP
+      command: fallocate -l 2G /swapfile
+      when: not swap_stat.stat.exists
+
+    - name: Nadanie bezpiecznych uprawnien dla pliku SWAP
+      file:
+        path: /swapfile
+        mode: '0600'
+
+    - name: Formatowanie pliku jako SWAP
+      command: mkswap /swapfile
+      when: not swap_stat.stat.exists
+
+    - name: Aktywacja pamieci SWAP w systemie
+      command: swapon /swapfile
+      when: not swap_stat.stat.exists
+
+    - name: Dodanie SWAP do fstab (aby dzialal po restarcie maszyny)
+      mount:
+        name: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        passno: '0'
+        dump: '0'
+        state: present
+
+    # --- 2. SEKCJA INSTALACJI DOCKERA ---
+    - name: Instalacja zaleznosci systemowych
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Dodanie klucza GPG repozytorium Dockera
+      ansible.builtin.shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
+      args:
+        creates: /etc/apt/trusted.gpg.d/docker.gpg
+
+    - name: Dodanie oficjalnego repozytorium Dockera
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+    - name: Instalacja srodowiska Docker i wtyczki Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Dodanie uzytkownika group8 do grupy docker
+      user:
+        name: group8
+        groups: docker
+        append: yes
+
+    - name: Instalacja biblioteki python-docker na serwerze
+      apt:
+        name: python3-docker
+        state: present
+
+    # --- 3. SEKCJA ZABBIX DOCKER COMPOSE ---
+    - name: Utworzenie katalogu dla projektu Zabbix
+      file:
+        path: /opt/zabbix
+        state: directory
+        mode: '0755'
+
+    - name: Przeslanie pliku docker-compose.yml
+      copy:
+        src: ../docker/docker-compose.yml
+        dest: /opt/zabbix/docker-compose.yml
+        mode: '0644'
+
+    - name: Uruchomienie infrastruktury Zabbix
+      community.docker.docker_compose_v2:
+          project_src: /opt/zabbix
+          state: present
+
+    # --- 4. SEKCJA ZABBIX AGENT 2 (NATYWNY) ---
+    - name: Pobranie paczki repozytorium Zabbix 7.0 dla Ubuntu 22.04
+      get_url:
+        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
+        dest: /tmp/zabbix-release_7.0-2+ubuntu22.04_all.deb
+
+    - name: Instalacja repozytorium Zabbix
+      apt:
+        deb: /tmp/zabbix-release_7.0-2+ubuntu22.04_all.deb
+
+    - name: Instalacja Zabbix Agent 2
+      apt:
+        name: zabbix-agent2
+        state: present
+        update_cache: yes
+
+    - name: Uruchomienie usługi Zabbix Agent 2
+      systemd:
+        name: zabbix-agent2
+        state: started
+        enabled: yes
+
+    - name: Dodanie IP Dockera do zaufanych adresow w Zabbix Agent
+      lineinfile:
+       path: /etc/zabbix/zabbix_agent2.conf
+       regexp: '^Server='
+       line: 'Server=127.0.0.1,172.17.0.1'
+
+    # --- 5. KLUCZE SSH ---
+    - name: Dodanie kluczy SSH
+      ansible.posix.authorized_key:
+        user: group8
+        state: present
+        key: "{{ item }}"
+      loop:
+        - "{{ lookup('file', '../terraform/.ssh/others/id_rsa_m.pub') }}"
+        - "{{ lookup('file', '../terraform/.ssh/others/id_rsa.pub') }}"
