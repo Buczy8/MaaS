@@ -97,14 +97,9 @@
           state: present
 
     # --- 4. SEKCJA ZABBIX AGENT 2 (NATYWNY) ---
-    - name: Pobranie paczki repozytorium Zabbix 7.0 dla Ubuntu 22.04
-      get_url:
-        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
-        dest: /tmp/zabbix-release_7.0-2+ubuntu22.04_all.deb
-
-    - name: Instalacja repozytorium Zabbix
+    - name: Pobranie i instalacja repozytorium Zabbix 7.0
       apt:
-        deb: /tmp/zabbix-release_7.0-2+ubuntu22.04_all.deb
+        deb: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
 
     - name: Instalacja Zabbix Agent 2
       apt:
@@ -112,17 +107,23 @@
         state: present
         update_cache: yes
 
-    - name: Uruchomienie usługi Zabbix Agent 2
+    - name: Dodanie uzytkownika zabbix do grupy docker
+      user:
+        name: zabbix
+        groups: docker
+        append: yes
+
+    - name: Konfiguracja adresow serwera w Zabbix Agent
+      lineinfile:
+        path: /etc/zabbix/zabbix_agent2.conf
+        regexp: '^Server='
+        line: 'Server=127.0.0.1,172.17.0.1'
+
+    - name: Finalny restart i wlaczenie Zabbix Agent 2
       systemd:
         name: zabbix-agent2
-        state: started
+        state: restarted
         enabled: yes
-
-    - name: Dodanie IP Dockera do zaufanych adresow w Zabbix Agent
-      lineinfile:
-       path: /etc/zabbix/zabbix_agent2.conf
-       regexp: '^Server='
-       line: 'Server=127.0.0.1,172.17.0.1'
 
     # --- 5. KLUCZE SSH ---
     - name: Dodanie kluczy SSH
