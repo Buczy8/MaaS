@@ -1,0 +1,90 @@
+---
+- name: Instalacja i konfiguracja Zabbix Agent 2, Nginx oraz PostgreSQL
+  hosts: agent_vm
+  become: yes
+
+  vars_files:
+    - secrets.yml
+
+  tasks:
+    # --- 1. ZABBIX AGENT 2 ---
+    - name: Pobranie paczki repozytorium Zabbix 7.0
+      get_url:
+        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
+        dest: /tmp/zabbix-release.deb
+
+    - name: Instalacja repozytorium Zabbix
+      apt:
+        deb: /tmp/zabbix-release.deb
+
+    - name: Instalacja Zabbix Agent 2
+      apt:
+        name:
+        - zabbix-agent2
+        - zabbix-agent2-plugin-postgresql
+        state: present
+        update_cache: yes
+
+    - name: Konfiguracja adresu serwera Zabbix (Prywatne IP glownej maszyny)
+      lineinfile:
+        path: /etc/zabbix/zabbix_agent2.conf
+        regexp: '^Server='
+        line: "Server={{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
+
+    - name: Konfiguracja aktywnego serwera Zabbix
+      lineinfile:
+        path: /etc/zabbix/zabbix_agent2.conf
+        regexp: '^ServerActive='
+        line: "ServerActive={{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
+
+    - name: Ustawienie nazwy hosta (Hostname)
+      lineinfile:
+        path: /etc/zabbix/zabbix_agent2.conf
+        regexp: '^Hostname='
+        line: "Hostname=group8AgentVM"
+
+    # --- 2. SERWER WWW (NGINX) ---
+    - name: Instalacja serwera Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Konfiguracja statystyk Nginx dla Zabbixa
+      copy:
+        dest: /etc/nginx/conf.d/status.conf
+        content: |
+          server {
+              listen 8080;
+              server_name localhost;
+              location /basic_status {
+                  stub_status;
+                  allow 127.0.0.1;
+                  deny all;
+              }
+          }
+
+    - name: Restart uslugi Nginx
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    # --- 3. BAZA DANYCH (mariadb) ---
+    - name: Instalacja serwera MariaDB
+      apt:
+        name: mariadb-server
+        state: present
+
+    - name: Utworzenie uzytkownika monitorujacego w MariaDB (czysty SQL)
+      command: >
+        mysql -e "CREATE USER IF NOT EXISTS 'zbx_monitor'@'127.0.0.1' IDENTIFIED BY '{{ pg_monitor_password }}';
+        GRANT REPLICATION CLIENT, PROCESS, SHOW DATABASES, SLAVE MONITOR, SHOW VIEW ON *.* TO 'zbx_monitor'@'127.0.0.1';
+        FLUSH PRIVILEGES;"
+      ignore_errors: yes
+
+    # --- 4. RESTART AGENTA ---
+    - name: Finalny restart i wlaczenie Zabbix Agent 2
+      systemd:
+        name: zabbix-agent2
+        state: restarted
+        enabled: yes

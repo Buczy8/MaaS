@@ -175,17 +175,91 @@ output "public_ip_address" {
   value = azurerm_public_ip.myterraformpublicip.ip_address
 }
 
-# 10. Generowanie pliku inventory dla Ansible
+# --- DRUGA MASZYNA WIRTUALNA (AGENT) ---
+
+# 11. Publiczne IP dla drugiej maszyny
+resource "azurerm_public_ip" "agent_public_ip" {
+  name                = "group8AgentPublicIP"
+  location            = azurerm_resource_group.myterraformgroup.location
+  resource_group_name = azurerm_resource_group.myterraformgroup.name
+  allocation_method   = "Static"
+}
+
+# 12. Interfejs sieciowy dla drugiej maszyny
+resource "azurerm_network_interface" "agent_nic" {
+  name                = "group8AgentNIC"
+  location            = azurerm_resource_group.myterraformgroup.location
+  resource_group_name = azurerm_resource_group.myterraformgroup.name
+
+  ip_configuration {
+    name                          = "agentNicConfiguration"
+    subnet_id                     = azurerm_subnet.myterraformsubnet.id # Ta sama podsieć!
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.agent_public_ip.id
+  }
+}
+
+# 13. Powiązanie Security Group (otwarte porty) z drugą maszyną
+resource "azurerm_network_interface_security_group_association" "agent_nic_nsg_assoc" {
+  network_interface_id      = azurerm_network_interface.agent_nic.id
+  network_security_group_id = azurerm_network_security_group.myterraformnsg.id
+}
+
+# 14. Druga maszyna wirtualna (Ubuntu)
+resource "azurerm_linux_virtual_machine" "agent_vm" {
+  name                  = "group8AgentVM"
+  location              = azurerm_resource_group.myterraformgroup.location
+  resource_group_name   = azurerm_resource_group.myterraformgroup.name
+  network_interface_ids = [azurerm_network_interface.agent_nic.id]
+  size                  = "Standard_B1s"
+
+  os_disk {
+    name                 = "group8AgentDisk"
+    caching              = "ReadWrite"
+    storage_account_type = "StandardSSD_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  computer_name                   = "group8agent"
+  admin_username                  = "group8"
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = "group8"
+    public_key = file(".ssh/id_rsa.pub")
+  }
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.mystorageaccount.primary_blob_endpoint
+  }
+}
+
+# --- AKTUALIZACJA GENERATORA INVENTORY ---
+
+# 15. Zaktualizowany plik dla Ansible (obsługuje teraz Dwie maszyny)
 resource "local_file" "ansible_inventory" {
   content = <<-EOT
   [azure_vm]
-  ${azurerm_public_ip.myterraformpublicip.ip_address}
+  ${azurerm_public_ip.myterraformpublicip.ip_address} private_ip=${azurerm_network_interface.myterraformnic.private_ip_address}
 
-  [azure_vm:vars]
+  [agent_vm]
+  ${azurerm_public_ip.agent_public_ip.ip_address} private_ip=${azurerm_network_interface.agent_nic.private_ip_address}
+
+  [all:vars]
   ansible_user=group8
-  ansible_ssh_private_key_file=${abspath("${path.module}/.ssh/id_rsa")}
+  ansible_ssh_private_key_file=terraform/.ssh/id_rsa
   ansible_ssh_common_args='-o StrictHostKeyChecking=no'
   EOT
 
   filename = "../ansible/inventory.ini"
+}
+
+output "agent_private_ip" {
+  value = azurerm_network_interface.agent_nic.private_ip_address
 }
