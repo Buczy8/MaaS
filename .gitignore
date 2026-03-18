@@ -7,9 +7,9 @@
 *.terraform.tfstate.lock.info
 # Local secrets
 **/.env
-ansible/group_vars/all.local.yml
 
 # SSH keys
 terraform/.ssh/
 
 .idea/
+/ansible/secrets.yml
