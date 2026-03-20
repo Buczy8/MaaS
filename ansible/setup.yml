@@ -5,14 +5,10 @@
   tasks:
 
     # --- 1. SEKCJA PAMIĘCI SWAP ---
-    - name: Sprawdzenie, czy plik swap juz istnieje
-      stat:
-        path: /swapfile
-      register: swap_stat
-
     - name: Utworzenie pustego pliku 2GB na SWAP
       command: fallocate -l 2G /swapfile
-      when: not swap_stat.stat.exists
+      args:
+        creates: /swapfile
 
     - name: Nadanie bezpiecznych uprawnien dla pliku SWAP
       file:
@@ -20,22 +16,19 @@
         mode: '0600'
 
     - name: Formatowanie pliku jako SWAP
-      command: mkswap /swapfile
-      when: not swap_stat.stat.exists
+      community.general.filesystem:
+        fstype: swap
+        dev: /swapfile
 
-    - name: Aktywacja pamieci SWAP w systemie
-      command: swapon /swapfile
-      when: not swap_stat.stat.exists
-
-    - name: Dodanie SWAP do fstab (aby dzialal po restarcie maszyny)
-      mount:
+    - name: Dodanie SWAP do fstab i jego aktywacja
+      ansible.posix.mount:
         name: none
         src: /swapfile
         fstype: swap
         opts: sw
         passno: '0'
         dump: '0'
-        state: present
+        state: mounted
 
     # --- 2. SEKCJA INSTALACJI DOCKERA ---
     - name: Instalacja zaleznosci systemowych

@@ -69,17 +69,20 @@
         enabled: yes
 
     # --- 3. BAZA DANYCH (mariadb) ---
-    - name: Instalacja serwera MariaDB
+    - name: Instalacja serwera MariaDB oraz zaleznosci Pythona
       apt:
-        name: mariadb-server
+        name:
+          - mariadb-server
+          - python3-pymysql
         state: present
 
-    - name: Utworzenie uzytkownika monitorujacego w MariaDB (czysty SQL)
-      command: >
-        mysql -e "CREATE USER IF NOT EXISTS 'zbx_monitor'@'127.0.0.1' IDENTIFIED BY '{{ pg_monitor_password }}';
-        GRANT REPLICATION CLIENT, PROCESS, SHOW DATABASES, SLAVE MONITOR, SHOW VIEW ON *.* TO 'zbx_monitor'@'127.0.0.1';
-        FLUSH PRIVILEGES;"
-      ignore_errors: yes
+    - name: Utworzenie uzytkownika monitorujacego w MariaDB (Moduł Ansible)
+      community.mysql.mysql_user:
+        name: zbx_monitor
+        password: "{{ pg_monitor_password }}"
+        host: "127.0.0.1"
+        priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW"
+        state: present
 
     # --- 4. RESTART AGENTA ---
     - name: Finalny restart i wlaczenie Zabbix Agent 2
