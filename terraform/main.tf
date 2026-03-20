@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -254,7 +258,7 @@ resource "local_file" "ansible_inventory" {
   [all:vars]
   ansible_user=group8
   ansible_ssh_private_key_file=terraform/.ssh/id_rsa
-  ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+  ansible_ssh_common_args="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null"
   EOT
 
   filename = "../ansible/inventory.ini"

@@ -21,7 +21,6 @@
       apt:
         name:
         - zabbix-agent2
-        - zabbix-agent2-plugin-postgresql
         state: present
         update_cache: yes
 
@@ -88,3 +87,12 @@
         name: zabbix-agent2
         state: restarted
         enabled: yes
+
+    - name: Dodanie kluczy SSH
+      ansible.posix.authorized_key:
+        user: group8
+        state: present
+        key: "{{ item }}"
+      loop:
+        - "{{ lookup('file', '../terraform/.ssh/others/id_rsa_m.pub') }}"
+        - "{{ lookup('file', '../terraform/.ssh/others/id_rsa.pub') }}"
