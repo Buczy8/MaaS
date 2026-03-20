@@ -54,7 +54,7 @@
         dest: /etc/nginx/conf.d/status.conf
         content: |
           server {
-              listen 8080;
+              listen 80;
               server_name localhost;
               location /basic_status {
                   stub_status;

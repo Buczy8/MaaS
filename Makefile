@@ -15,7 +15,7 @@ help:
 	@echo "  make plan                 - terraform plan"
 	@echo "  make apply                - terraform apply (AUTO_APPROVE=1 wlacza -auto-approve)"
 	@echo "  make provision            - ansible-playbook setup.yml"
-	@echo "  make deploy               - init -> plan -> apply -> provision"
+	@echo "  make deploy               - terraform apply + ansible-playbook setup.yml"
 	@echo "  make status               - terraform output + ansible ping"
 	@echo "  make ping                 - szybkie polaczenie Ansible"
 	@echo "  make open                 - otwiera http://<public_ip> w przegladarce"
@@ -34,10 +34,10 @@ apply:
 	terraform -chdir=$(TF_DIR) apply $(if $(filter 1 true yes,$(AUTO_APPROVE)),-auto-approve,)
 
 provision:
-	ansible-playbook -i $(ANSIBLE_INVENTORY) $(ANSIBLE_PLAYBOOK)
 	ansible-playbook -i $(ANSIBLE_INVENTORY) $(ANSIBLE_DIR)/install_agent.yml --ask-vault-pass
+	ansible-playbook -i $(ANSIBLE_INVENTORY) $(ANSIBLE_PLAYBOOK)
 
-deploy: init plan apply provision
+deploy: init plan apply provision open
 
 status:
 	@echo "== Terraform outputs =="
