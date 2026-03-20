@@ -185,7 +185,84 @@ make ping
 cat ansible/inventory.ini
 ```
 
-## 9. Znane punkty awarii
+## 9. Symulacja ruchu i obciazenia na maszynie `group8AgentVM`
+
+Ponizsze komendy uruchamiaj po SSH na `group8AgentVM` jako uzytkownik z uprawnieniami `sudo`.
+
+### 9.1 Ruch HTTP na Nginx
+
+Szybki test endpointu:
+
+```bash
+curl -I http://127.0.0.1/
+```
+
+Symulacja ruchu HTTP w tle i bez outputu:
+
+```bash
+nohup bash -c 'while true; do curl -s -o /dev/null http://127.0.0.1/; done' >/dev/null 2>&1 & echo $! > /tmp/zbx_http_load.pid
+```
+
+Zatrzymanie:
+
+```bash
+kill "$(cat /tmp/zbx_http_load.pid)"
+rm -f /tmp/zbx_http_load.pid
+```
+
+### 9.2 Ruch do bazy MariaDB
+
+Zaklada konto monitorujace `zbx_monitor` skonfigurowane przez Ansible.
+
+Pojedynczy test logowania:
+
+```bash
+mysql -u zbx_monitor -p -h 127.0.0.1 -e "SELECT NOW();"
+```
+
+Symulacja ruchu SQL w tle i bez outputu:
+
+```bash
+nohup bash -c 'export MYSQL_PWD="<haslo_zbx_monitor>"; while true; do mysql -u zbx_monitor -h 127.0.0.1 -e "SHOW STATUS LIKE "'"'Threads_connected'"'";" >/dev/null 2>&1; done' >/dev/null 2>&1 & echo $! > /tmp/zbx_sql_load.pid
+```
+
+Zatrzymanie:
+
+```bash
+kill "$(cat /tmp/zbx_sql_load.pid)"
+rm -f /tmp/zbx_sql_load.pid
+```
+
+### 9.3 Obciazenie CPU
+
+Obciazenie CPU w tle i bez outputu (2 procesy `yes`):
+
+```bash
+nohup bash -c 'yes >/dev/null 2>&1 & yes >/dev/null 2>&1 & wait' >/dev/null 2>&1 & echo $! > /tmp/zbx_cpu_load.pid
+```
+
+Dla mocniejszego obciazenia (4 procesy):
+
+```bash
+nohup bash -c 'yes >/dev/null 2>&1 & yes >/dev/null 2>&1 & yes >/dev/null 2>&1 & yes >/dev/null 2>&1 & wait' >/dev/null 2>&1 & echo $! > /tmp/zbx_cpu_load.pid
+```
+
+Zatrzymanie:
+
+```bash
+kill "$(cat /tmp/zbx_cpu_load.pid)"
+pkill -f '^yes$' || true
+rm -f /tmp/zbx_cpu_load.pid
+```
+
+W trakcie testow monitoruj zuzycie CPU i load:
+
+```bash
+top
+uptime
+```
+
+## 10. Znane punkty awarii
 
 - `Vault secret not found`/`Decryption failed`: brak `ansible/secrets.yml` lub bledne haslo Vault.
 - `copy ../docker/.env failed`: brak `docker/.env` lokalnie.
@@ -193,14 +270,14 @@ cat ansible/inventory.ini
 - Zabbix UI na `:80` nie odpowiada: kontenery jeszcze startuja lub blad DB init.
 - Rozjazd IP: `ansible/inventory.ini` nadpisywane przez Terraform, nie edytowac recznie trwale.
 
-## 10. Bezpieczenstwo operacyjne
+## 11. Bezpieczenstwo operacyjne
 
 - Sekrety trzymaj tylko w `ansible/secrets.yml` (Vault) i lokalnym `docker/.env`.
 - Nie commituj `terraform/.ssh/`, `ansible/secrets.yml`, `.env`.
 - Ograniczaj publiczny dostep do NSG (obecnie otwarte `22` i `80` globalnie).
 - Po testach usun zasoby, aby uniknac kosztow.
 
-## 11. Deprovisioning
+## 12. Deprovisioning
 
 ```bash
 make destroy CONFIRM=YES AUTO=1
