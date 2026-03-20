@@ -17,8 +17,8 @@ provider "azurerm" {
 
 # 1. Resource Group
 resource "azurerm_resource_group" "myterraformgroup" {
-  name     = "Group8"
-  location = "North Europe"
+  name     = var.resource_group_name
+  location = var.location
 
   tags = {
     environment = "Terraform Demo"
@@ -28,7 +28,7 @@ resource "azurerm_resource_group" "myterraformgroup" {
 # 2. Virtual Network
 resource "azurerm_virtual_network" "myterraformnetwork" {
   name                = "Group8net"
-  address_space       = ["10.0.0.0/16"]
+  address_space       = var.vnet_address_space
   location            = azurerm_resource_group.myterraformgroup.location
   resource_group_name = azurerm_resource_group.myterraformgroup.name
 
@@ -42,7 +42,7 @@ resource "azurerm_subnet" "myterraformsubnet" {
   name                 = "group8Subnet"
   resource_group_name  = azurerm_resource_group.myterraformgroup.name
   virtual_network_name = azurerm_virtual_network.myterraformnetwork.name
-  address_prefixes     = ["10.0.1.0/24"]
+  address_prefixes     = var.subnet_address_prefix
 }
 
 # 4. Public IP
@@ -142,7 +142,7 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
   location              = azurerm_resource_group.myterraformgroup.location
   resource_group_name   = azurerm_resource_group.myterraformgroup.name
   network_interface_ids = [azurerm_network_interface.myterraformnic.id]
-  size                  = "Standard_B1s"
+  size                  = var.vm_size
 
   os_disk {
     name                 = "group8Disk"
@@ -158,12 +158,12 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
   }
 
   computer_name                   = "group8vm"
-  admin_username                  = "group8"
+  admin_username                  = var.admin_username
   disable_password_authentication = true
 
   admin_ssh_key {
-    username   = "group8"
-    public_key = file(".ssh/id_rsa.pub")
+    username   = var.admin_username
+    public_key = file(var.ssh_public_key_path)
   }
 
   boot_diagnostics {
@@ -215,7 +215,7 @@ resource "azurerm_linux_virtual_machine" "agent_vm" {
   location              = azurerm_resource_group.myterraformgroup.location
   resource_group_name   = azurerm_resource_group.myterraformgroup.name
   network_interface_ids = [azurerm_network_interface.agent_nic.id]
-  size                  = "Standard_B1s"
+  size                  = var.vm_size
 
   os_disk {
     name                 = "group8AgentDisk"
@@ -231,12 +231,12 @@ resource "azurerm_linux_virtual_machine" "agent_vm" {
   }
 
   computer_name                   = "group8agent"
-  admin_username                  = "group8"
+  admin_username                  = var.admin_username
   disable_password_authentication = true
 
   admin_ssh_key {
-    username   = "group8"
-    public_key = file(".ssh/id_rsa.pub")
+    username   = var.admin_username
+    public_key = file(var.ssh_public_key_path)
   }
 
   boot_diagnostics {
@@ -256,7 +256,7 @@ resource "local_file" "ansible_inventory" {
   ${azurerm_public_ip.agent_public_ip.ip_address} private_ip=${azurerm_network_interface.agent_nic.private_ip_address}
 
   [all:vars]
-  ansible_user=group8
+  ansible_user=${var.admin_username}
   ansible_ssh_private_key_file=terraform/.ssh/id_rsa
   ansible_ssh_common_args="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null"
   EOT
