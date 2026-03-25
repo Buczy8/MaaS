@@ -76,6 +76,18 @@
           - python3-pymysql
         state: present
 
+    - name: Upewnienie sie, ze MariaDB jest uruchomiona
+      systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Oczekiwanie na socket MariaDB
+      wait_for:
+        path: /run/mysqld/mysqld.sock
+        state: present
+        timeout: 30
+
     - name: Utworzenie uzytkownika monitorujacego w MariaDB (Moduł Ansible)
       community.mysql.mysql_user:
         name: zbx_monitor
@@ -83,6 +95,9 @@
         host: "127.0.0.1"
         priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW"
         state: present
+        login_unix_socket: /run/mysqld/mysqld.sock
+        check_implicit_admin: true
+      become: yes
 
     # --- 4. RESTART AGENTA ---
     - name: Finalny restart i wlaczenie Zabbix Agent 2
