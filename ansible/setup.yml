@@ -4,32 +4,6 @@
   become: yes # Ansible wykona te komendy jako administrator (root)
   tasks:
 
-    # --- 1. SEKCJA PAMIĘCI SWAP ---
-    - name: Utworzenie pustego pliku 2GB na SWAP
-      command: fallocate -l 2G /swapfile
-      args:
-        creates: /swapfile
-
-    - name: Nadanie bezpiecznych uprawnien dla pliku SWAP
-      file:
-        path: /swapfile
-        mode: '0600'
-
-    - name: Formatowanie pliku jako SWAP
-      community.general.filesystem:
-        fstype: swap
-        dev: /swapfile
-
-    - name: Dodanie SWAP do fstab i jego aktywacja
-      ansible.posix.mount:
-        name: none
-        src: /swapfile
-        fstype: swap
-        opts: sw
-        passno: '0'
-        dump: '0'
-        state: mounted
-
     # --- 2. SEKCJA INSTALACJI DOCKERA ---
     - name: Instalacja zaleznosci systemowych
       apt:

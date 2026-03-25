@@ -215,7 +215,7 @@ resource "azurerm_linux_virtual_machine" "agent_vm" {
   location              = azurerm_resource_group.myterraformgroup.location
   resource_group_name   = azurerm_resource_group.myterraformgroup.name
   network_interface_ids = [azurerm_network_interface.agent_nic.id]
-  size                  = var.vm_size
+  size                  = var.vm_size_agent
 
   os_disk {
     name                 = "group8AgentDisk"

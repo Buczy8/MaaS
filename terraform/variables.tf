@@ -23,11 +23,16 @@ variable "subnet_address_prefix" {
 }
 
 variable "vm_size" {
-  description = "Rozmiar maszyn wirtualnych"
+  description = "Rozmiar maszyn wirtualnych (serwer)"
+  type        = string
+  default     = "Standard_B2s"
+}
+
+variable "vm_size_agent" {
+  description = "Rozmiar maszyn wirtualnych (agent)"
   type        = string
   default     = "Standard_B1s"
 }
-
 variable "admin_username" {
   description = "Nazwa użytkownika administratora dla maszyn wirtualnych"
   type        = string
