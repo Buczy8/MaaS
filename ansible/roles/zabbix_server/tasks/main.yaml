@@ -1,0 +1,25 @@
+---
+- name: Utworzenie katalogu dla projektu Zabbix
+  ansible.builtin.file:
+    path: /opt/zabbix
+    state: directory
+    mode: "0755"
+
+- name: Przeslanie pliku docker-compose
+  ansible.builtin.copy:
+    src: docker-compose.yaml
+    dest: /opt/zabbix/docker-compose.yml
+    mode: "0644"
+
+- name: Przeslanie pliku .env z haslami
+  ansible.builtin.copy:
+    src: .env
+    dest: /opt/zabbix/.env
+    mode: "0600"
+
+- name: Uruchomienie infrastruktury Zabbix
+  community.docker.docker_compose_v2:
+    project_src: /opt/zabbix
+    state: present
+
+

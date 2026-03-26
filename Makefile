@@ -6,8 +6,7 @@ TF          := terraform -chdir=$(TF_DIR)
 
 # Ścieżki Ansible
 INVENTORY   := $(ANSIBLE_DIR)/inventory.ini
-PLAYBOOK    := $(ANSIBLE_DIR)/setup.yml
-AGENT_PLAY  := $(ANSIBLE_DIR)/install_agent.yml
+SITE_PLAY   := $(ANSIBLE_DIR)/playbook.yaml
 
 # --- Cele główne (Phony) ---
 .PHONY: help init plan apply provision deploy status ping open destroy clean
@@ -41,8 +40,7 @@ destroy:
 
 # --- Ansible ---
 provision:
-	ansible-playbook -i $(INVENTORY) $(AGENT_PLAY) --ask-vault-pass
-	ansible-playbook -i $(INVENTORY) $(PLAYBOOK)
+	ansible-playbook -i $(INVENTORY) $(SITE_PLAY) --ask-vault-pass
 
 ping:
 	ansible -i $(INVENTORY) all -m ping

@@ -19,22 +19,29 @@ Topologia:
 Kolejnosc uruchomienia (`make deploy`):
 
 1. `terraform init` i `terraform apply` tworza zasoby oraz generuja `ansible/inventory.ini`.
-2. `ansible/install_agent.yml` konfiguruje `agent_vm` i uzywa sekretu `pg_monitor_password` z Vault.
-3. `ansible/setup.yml` konfiguruje `azure_vm`, kopiuje `docker-compose.yml` i `docker/.env`, uruchamia stack kontenerow.
+2. `ansible/playbook.yaml` uruchamia role `base`, `docker`, `zabbix_server`, `zabbix_agent`, `nginx`, `mariadb` dla odpowiednich grup (`azure_vm`, `agent_vm`) i uzywa sekretu `pg_monitor_password` z Vault.
+3. Rola `zabbix_server` kopiuje `docker-compose` oraz `docker/.env` na host glowny i uruchamia stack kontenerow, a `zabbix_agent` konfiguruje natywnego agenta.
 4. `make open` probuje otworzyc `http://<public_ip_address>` z outputu Terraform.
 
 Istotne zaleznosci:
 
-- `ansible/setup.yml` wymaga lokalnego pliku `docker/.env`.
-- `ansible/install_agent.yml` wymaga odszyfrowywalnego `ansible/secrets.yml`.
+- `ansible/playbook.yaml` wymaga lokalnego pliku `docker/.env`.
+- `ansible/playbook.yaml` wymaga odszyfrowywalnego `ansible/secrets.yml`.
 - inventory jest artefaktem Terraform (`local_file`) i moze zostac nadpisane przy kolejnym `apply`.
 
 ## 3. Repozytorium (kluczowe pliki)
 
 - `Makefile` - orchestration (`init`, `plan`, `apply`, `provision`, `deploy`, `destroy`).
 - `terraform/main.tf` - RG, VNet, Subnet, NSG, NIC, 2x VM, public IP, inventory output.
-- `ansible/install_agent.yml` - konfiguracja `agent_vm`, `vars_files: secrets.yml`.
-- `ansible/setup.yml` - konfiguracja `azure_vm`, Docker, Compose, Agent 2, SWAP.
+- `ansible/playbook.yaml` - glowny playbook uruchamiajacy role dla obu VM.
+- `ansible/group_vars/azure_vm.yml` - zmienne `zabbix_agent` dla hosta glownego.
+- `ansible/group_vars/agent_vm.yml` - zmienne `zabbix_agent` dla hosta monitorowanego.
+- `ansible/roles/base/tasks/main.yaml` - wspolne taski bazowe (pakiety + klucze SSH).
+- `ansible/roles/docker/tasks/main.yaml` - instalacja Dockera i Compose na `azure_vm`.
+- `ansible/roles/zabbix_server/tasks/main.yaml` - uruchomienie Zabbix Server/Web/DB przez Docker Compose na `azure_vm`.
+- `ansible/roles/zabbix_agent/tasks/main.yaml` - instalacja i konfiguracja Zabbix Agent 2 na hostach.
+- `ansible/roles/nginx/tasks/main.yaml` - osobna konfiguracja Nginx na `agent_vm`.
+- `ansible/roles/mariadb/tasks/main.yaml` - osobna konfiguracja MariaDB na `agent_vm`.
 - `docker/docker-compose.yml` - `mysql:8.0`, `zabbix-server`, `zabbix-web`.
 - `docker/.env.example` - template zmiennych dla Compose.
 - `ansible/secrets.example.yml` - template sekretow do zaszyfrowania Vaultem.
@@ -84,7 +91,7 @@ MYSQL_DATABASE=zabbix
 Uwagi:
 
 - `**/.env` jest ignorowane przez `.gitignore`.
-- brak pliku przerwie playbook `ansible/setup.yml` na tasku kopiowania `.env`.
+- brak pliku przerwie playbook `ansible/playbook.yaml` na tasku kopiowania `.env`.
 
 ### 5.2 `ansible/secrets.yml` (Vault)
 

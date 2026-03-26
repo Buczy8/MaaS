@@ -1,0 +1,30 @@
+---
+- name: Instalacja serwera MariaDB i zaleznosci Python
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+
+- name: Upewnienie sie, ze MariaDB jest uruchomiona
+  ansible.builtin.systemd:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Oczekiwanie na socket MariaDB
+  ansible.builtin.wait_for:
+    path: /run/mysqld/mysqld.sock
+    state: present
+    timeout: 30
+
+- name: Utworzenie uzytkownika monitorujacego w MariaDB
+  community.mysql.mysql_user:
+    name: zbx_monitor
+    password: "{{ pg_monitor_password }}"
+    host: "127.0.0.1"
+    priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW"
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+    check_implicit_admin: true
+
