@@ -1,11 +1,11 @@
 [azure_vm]
-4.231.219.209 private_ip=10.0.1.5
+${azure_vm_public_ip} private_ip=${azure_vm_private_ip}
 
 [agent_vm]
-74.234.58.172 private_ip=10.0.1.4
+${agent_vm_public_ip} private_ip=${agent_vm_private_ip}
 
 [all:vars]
-ansible_user=group8
+ansible_user=${ansible_user}
 ansible_ssh_private_key_file=terraform/.ssh/id_rsa
 ansible_ssh_common_args="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null"
 

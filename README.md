@@ -32,7 +32,10 @@ Istotne zaleznosci:
 ## 3. Repozytorium (kluczowe pliki)
 
 - `Makefile` - orchestration (`init`, `plan`, `apply`, `provision`, `deploy`, `destroy`).
-- `terraform/main.tf` - RG, VNet, Subnet, NSG, NIC, 2x VM, public IP, inventory output.
+- `terraform/main.tf` - RG, VNet, Subnet, NSG, NIC, 2x VM i zasoby pomocnicze.
+- `terraform/inventory.tf` - generator `ansible/inventory.ini` (resource `local_file`).
+- `terraform/outputs.tf` - outputy Terraform (`public_ip_address`, `agent_private_ip`).
+- `terraform/templates/ansible_inventory.tftpl` - szablon inventory dla Ansible.
 - `ansible/playbook.yaml` - glowny playbook uruchamiajacy role dla obu VM.
 - `ansible/ansible.cfg` - lokalna konfiguracja Ansible (inventory, roles_path, SSH).
 - `ansible/requirements.yml` - kolekcje Ansible wymagane przez role.
