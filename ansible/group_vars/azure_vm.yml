@@ -1,3 +1,4 @@
 ---
-zabbix_agent_server: "127.0.0.1,172.16.0.0/12"
-zabbix_agent_add_to_docker_group: true
+# 1. Parametry agenta Zabbix na serwerze centralnym
+zabbix_agent_server: "127.0.0.1,172.16.0.0/12" # Dopuszcza lokalny serwer i ruch z prywatnej podsieci VNet.
+zabbix_agent_add_to_docker_group: true # Pozwala template'om Dockera odczytywac metryki kontenerow.

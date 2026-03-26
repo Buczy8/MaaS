@@ -1,20 +1,22 @@
 ---
+# 1. Konfiguracja serwera centralnego (Zabbix + Agent)
 - name: Konfiguracja glownego hosta Zabbix
-  hosts: azure_vm
-  become: true
+  hosts: azure_vm # Grupa hostow serwera monitoringu z inventory.
+  become: true # Wymagane uprawnienia root do instalacji pakietow i uslug.
   roles:
-    - role: base
-    - role: docker
-    - role: zabbix_server
-    - role: zabbix_agent
+    - role: base # Wspolne zaleznosci systemowe i klucze SSH.
+    - role: docker # Silnik kontenerow potrzebny do uruchomienia Zabbixa.
+    - role: zabbix_server # Stack serwera Zabbix uruchamiany przez Docker Compose.
+    - role: zabbix_agent # Agent lokalny monitorujacy sam serwer.
 
+# 2. Konfiguracja hosta monitorowanego (Nginx + MariaDB + Agent)
 - name: Konfiguracja hosta monitorowanego
-  hosts: agent_vm
-  become: true
+  hosts: agent_vm # Grupa hostow reprezentujaca monitorowana maszyne aplikacyjna.
+  become: true # Zadania wymagaja zmian w systemie i uslugach.
   vars_files:
-    - secrets.yml
+    - secrets.yml # Zaszyfrowane hasla wykorzystywane m.in. przez role mariadb.
   roles:
-    - role: base
-    - role: nginx
-    - role: mariadb
-    - role: zabbix_agent
+    - role: base # Bazowa konfiguracja hosta.
+    - role: nginx # Serwer WWW z endpointem statusowym dla monitoringu.
+    - role: mariadb # Baza danych z kontem monitorujacym.
+    - role: zabbix_agent # Agent raportujacy metryki do serwera Zabbix.

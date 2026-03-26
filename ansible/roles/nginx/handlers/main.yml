@@ -1,6 +1,7 @@
 ---
+# Handler uruchamiany po zmianie pliku status.conf.
 - name: Restart nginx service
   ansible.builtin.systemd:
-    name: nginx
-    state: restarted
-    enabled: true
+    name: nginx # Usluga Nginx do restartu.
+    state: restarted # Wymusza przeladowanie zmienionej konfiguracji.
+    enabled: true # Zachowuje autostart uslugi.

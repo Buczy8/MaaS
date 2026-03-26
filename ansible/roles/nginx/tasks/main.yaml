@@ -1,13 +1,14 @@
 ---
+# 1. Instalacja i konfiguracja endpointu statusowego Nginx
 - name: Instalacja Nginx
   ansible.builtin.apt:
-    name: nginx
-    state: present
+    name: nginx # Pakiet serwera WWW.
+    state: present # Nginx ma byc zainstalowany.
 
 - name: Konfiguracja statystyk Nginx dla Zabbixa
   ansible.builtin.copy:
-    dest: /etc/nginx/conf.d/status.conf
-    mode: "0644"
+    dest: /etc/nginx/conf.d/status.conf # Dodatkowy virtual host z endpointem /basic_status.
+    mode: "0644" # Konfiguracja czytelna dla procesu nginx.
     content: |
       server {
           listen 80;
@@ -18,10 +19,10 @@
               deny all;
           }
       }
-  notify: Restart nginx service
+  notify: Restart nginx service # Restart tylko gdy plik konfiguracyjny ulegnie zmianie.
 
 - name: Upewnienie sie, ze Nginx jest wlaczony
   ansible.builtin.systemd:
-    name: nginx
-    state: started
-    enabled: true
+    name: nginx # Usluga nginx.
+    state: started # Usluga ma byc uruchomiona po konfiguracji.
+    enabled: true # Start automatyczny przy starcie systemu.

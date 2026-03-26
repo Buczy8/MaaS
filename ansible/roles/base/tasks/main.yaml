@@ -1,18 +1,20 @@
 ---
+# 1. Przygotowanie bazowych narzedzi systemowych
 - name: Instalacja podstawowych zaleznosci
   ansible.builtin.apt:
     name:
       - ca-certificates
       - curl
       - gnupg
-    state: present
-    update_cache: true
+    state: present # Upewnia, ze wymagane pakiety sa zainstalowane.
+    update_cache: true # Odswieza indeks APT przed instalacja.
 
+# 2. Dostep SSH dla wspolpracownikow/prowadzacego
 - name: Dodanie kluczy SSH
   ansible.posix.authorized_key:
-    user: group8
-    state: present
-    key: "{{ item }}"
+    user: group8 # Konto systemowe, do ktorego dodawane sa klucze.
+    state: present # Klucze maja pozostac stale w authorized_keys.
+    key: "{{ item }}" # Kolejne klucze pobierane z petli loop.
   loop:
-    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa_m.pub') }}"
-    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa.pub') }}"
+    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa_m.pub') }}" # Klucz dodatkowego operatora.
+    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa.pub') }}" # Klucz glowny operatora.

@@ -1,5 +1,6 @@
 ---
+# Kolekcje wymagane przez role i moduly uzywane w playbooku.
 collections:
-  - name: ansible.posix
-  - name: community.docker
-  - name: community.mysql
+  - name: ansible.posix # authorized_key i inne moduly systemowe POSIX.
+  - name: community.docker # Uruchamianie i zarzadzanie Docker Compose v2.
+  - name: community.mysql # Konfiguracja uzytkownikow i uprawnien MariaDB/MySQL.
