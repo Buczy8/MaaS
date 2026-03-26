@@ -1,0 +1,49 @@
+---
+- name: Pobranie paczki repozytorium Zabbix 7.0
+  ansible.builtin.get_url:
+    url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
+    dest: /tmp/zabbix-release.deb
+
+- name: Instalacja repozytorium Zabbix
+  ansible.builtin.apt:
+    deb: /tmp/zabbix-release.deb
+
+- name: Instalacja Zabbix Agent 2
+  ansible.builtin.apt:
+    name: zabbix-agent2
+    state: present
+    update_cache: true
+
+- name: Konfiguracja adresu serwera Zabbix
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: "^Server="
+    line: "Server={{ zabbix_agent_server }}"
+
+- name: Konfiguracja aktywnego serwera Zabbix
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: "^ServerActive="
+    line: "ServerActive={{ zabbix_agent_server_active }}"
+  when: zabbix_agent_server_active is defined
+
+- name: Ustawienie nazwy hosta agenta
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: "^Hostname="
+    line: "Hostname={{ zabbix_agent_hostname }}"
+  when: zabbix_agent_hostname is defined
+
+- name: Dodanie uzytkownika zabbix do grupy docker
+  ansible.builtin.user:
+    name: zabbix
+    groups: docker
+    append: true
+  when: zabbix_agent_add_to_docker_group | default(false)
+
+- name: Restart i wlaczenie Zabbix Agent 2
+  ansible.builtin.systemd:
+    name: zabbix-agent2
+    state: restarted
+    enabled: true
+

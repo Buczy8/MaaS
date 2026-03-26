@@ -1,0 +1,24 @@
+---
+- name: Konfiguracja glownego hosta Zabbix
+  hosts: azure_vm
+  become: true
+  roles:
+    - role: base
+    - role: docker
+    - role: zabbix_server
+    - role: zabbix_agent
+
+- name: Konfiguracja hosta monitorowanego
+  hosts: agent_vm
+  become: true
+  vars_files:
+    - secrets.yml
+  roles:
+    - role: base
+    - role: nginx
+    - role: mariadb
+    - role: zabbix_agent
+
+
+
+

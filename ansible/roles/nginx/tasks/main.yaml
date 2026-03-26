@@ -1,0 +1,26 @@
+---
+- name: Instalacja Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Konfiguracja statystyk Nginx dla Zabbixa
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/status.conf
+    content: |
+      server {
+          listen 80;
+          server_name localhost;
+          location /basic_status {
+              stub_status;
+              allow 127.0.0.1;
+              deny all;
+          }
+      }
+
+- name: Restart uslugi Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+    enabled: true
+

@@ -6,7 +6,7 @@
 *.terraform.lock.hcl
 *.terraform.tfstate.lock.info
 # Local secrets
-**/.env
+ansible/roles/zabbix_server/files/.env
 
 # SSH keys
 terraform/.ssh/

@@ -1,0 +1,19 @@
+---
+- name: Instalacja podstawowych zaleznosci
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Dodanie kluczy SSH
+  ansible.posix.authorized_key:
+    user: group8
+    state: present
+    key: "{{ item }}"
+  loop:
+    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa_m.pub') }}"
+    - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa.pub') }}"
+

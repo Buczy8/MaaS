@@ -1,0 +1,5 @@
+---
+zabbix_agent_server: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
+zabbix_agent_server_active: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
+zabbix_agent_hostname: group8AgentVM
+
