@@ -24,6 +24,7 @@
     password: "{{ pg_monitor_password }}"
     host: "127.0.0.1"
     priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW"
+    column_case_sensitive: false
     state: present
     login_unix_socket: /run/mysqld/mysqld.sock
     check_implicit_admin: true
