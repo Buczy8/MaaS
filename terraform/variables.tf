@@ -37,10 +37,20 @@ variable "admin_username" {
   description = "Nazwa użytkownika administratora dla maszyn wirtualnych"
   type        = string
   default     = "group8"
+
+  validation {
+    condition     = length(trimspace(var.admin_username)) > 0
+    error_message = "admin_username nie moze byc pusty."
+  }
 }
 
 variable "ssh_public_key_path" {
   description = "Ścieżka do klucza publicznego SSH"
   type        = string
   default     = ".ssh/id_rsa.pub"
+
+  validation {
+    condition     = length(trimspace(var.ssh_public_key_path)) > 0
+    error_message = "ssh_public_key_path nie moze byc pusta sciezka."
+  }
 }
