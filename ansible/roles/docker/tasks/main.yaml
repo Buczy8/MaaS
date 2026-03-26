@@ -1,14 +1,13 @@
 ---
 - name: Dodanie klucza GPG repozytorium Dockera
-  ansible.builtin.shell: |
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg |
-    gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
-  args:
-    creates: /etc/apt/trusted.gpg.d/docker.gpg
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/trusted.gpg.d/docker.asc
+    mode: "0644"
 
 - name: Dodanie oficjalnego repozytorium Dockera
   ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
     state: present
 
 - name: Instalacja Dockera i Compose
@@ -27,4 +26,3 @@
     name: group8
     groups: docker
     append: true
-

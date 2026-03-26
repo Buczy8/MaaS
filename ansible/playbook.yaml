@@ -18,7 +18,3 @@
     - role: nginx
     - role: mariadb
     - role: zabbix_agent
-
-
-
-

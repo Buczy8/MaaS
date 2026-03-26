@@ -34,6 +34,8 @@ Istotne zaleznosci:
 - `Makefile` - orchestration (`init`, `plan`, `apply`, `provision`, `deploy`, `destroy`).
 - `terraform/main.tf` - RG, VNet, Subnet, NSG, NIC, 2x VM, public IP, inventory output.
 - `ansible/playbook.yaml` - glowny playbook uruchamiajacy role dla obu VM.
+- `ansible/ansible.cfg` - lokalna konfiguracja Ansible (inventory, roles_path, SSH).
+- `ansible/requirements.yml` - kolekcje Ansible wymagane przez role.
 - `ansible/group_vars/azure_vm.yml` - zmienne `zabbix_agent` dla hosta glownego.
 - `ansible/group_vars/agent_vm.yml` - zmienne `zabbix_agent` dla hosta monitorowanego.
 - `ansible/roles/base/tasks/main.yaml` - wspolne taski bazowe (pakiety + klucze SSH).
@@ -56,10 +58,16 @@ Niezbedne narzedzia lokalnie:
 - `az` (Azure CLI)
 - `ssh-keygen`
 
-Wymagana kolekcja Ansible (uzywana przez `community.docker.docker_compose_v2`):
+Wymagane kolekcje Ansible:
 
 ```bash
-ansible-galaxy collection install community.docker
+ansible-galaxy collection install -r ansible/requirements.yml
+```
+
+Możesz tez uzyc celu Makefile:
+
+```bash
+make ansible-deps
 ```
 
 Autoryzacja Azure:
@@ -137,9 +145,11 @@ ssh-keygen -t rsa -b 4096 -f terraform/.ssh/others/id_rsa_m -N ""
 ### 7.1 Wariant krokowy
 
 ```bash
+make ansible-deps
 make init
 make plan
 make apply AUTO=1
+make ansible-check
 make provision
 make status
 make open

@@ -27,4 +27,3 @@
     state: present
     login_unix_socket: /run/mysqld/mysqld.sock
     check_implicit_admin: true
-
