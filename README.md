@@ -20,12 +20,12 @@ Kolejnosc uruchomienia (`make deploy`):
 
 1. `terraform init` i `terraform apply` tworza zasoby oraz generuja `ansible/inventory.ini`.
 2. `ansible/playbook.yaml` uruchamia role `base`, `docker`, `zabbix_server`, `zabbix_agent`, `nginx`, `mariadb` dla odpowiednich grup (`azure_vm`, `agent_vm`) i uzywa sekretu `pg_monitor_password` z Vault.
-3. Rola `zabbix_server` kopiuje `docker-compose` oraz `docker/.env` na host glowny i uruchamia stack kontenerow, a `zabbix_agent` konfiguruje natywnego agenta.
+3. Rola `zabbix_server` kopiuje `ansible/roles/zabbix_server/files/docker-compose.yaml` oraz `ansible/roles/zabbix_server/files/.env` na host glowny i uruchamia stack kontenerow, a `zabbix_agent` konfiguruje natywnego agenta.
 4. `make open` probuje otworzyc `http://<public_ip_address>` z outputu Terraform.
 
 Istotne zaleznosci:
 
-- `ansible/playbook.yaml` wymaga lokalnego pliku `docker/.env`.
+- `ansible/playbook.yaml` wymaga lokalnego pliku `ansible/roles/zabbix_server/files/.env`.
 - `ansible/playbook.yaml` wymaga odszyfrowywalnego `ansible/secrets.yml`.
 - inventory jest artefaktem Terraform (`local_file`) i moze zostac nadpisane przy kolejnym `apply`.
 
@@ -47,8 +47,8 @@ Istotne zaleznosci:
 - `ansible/roles/zabbix_agent/tasks/main.yaml` - instalacja i konfiguracja Zabbix Agent 2 na hostach.
 - `ansible/roles/nginx/tasks/main.yaml` - osobna konfiguracja Nginx na `agent_vm`.
 - `ansible/roles/mariadb/tasks/main.yaml` - osobna konfiguracja MariaDB na `agent_vm`.
-- `docker/docker-compose.yml` - `mysql:8.0`, `zabbix-server`, `zabbix-web`.
-- `docker/.env.example` - template zmiennych dla Compose.
+- `ansible/roles/zabbix_server/files/docker-compose.yaml` - `mysql:8.0`, `zabbix-server`, `zabbix-web`.
+- `ansible/roles/zabbix_server/files/.env.example` - template zmiennych dla Compose.
 - `ansible/secrets.example.yml` - template sekretow do zaszyfrowania Vaultem.
 
 ## 4. Wymagania
@@ -82,12 +82,12 @@ az account show
 
 ## 5. Sekrety i dane wrazliwe
 
-### 5.1 `docker/.env`
+### 5.1 `ansible/roles/zabbix_server/files/.env`
 
 Utworz plik runtime dla Compose:
 
 ```bash
-cp docker/.env.example docker/.env
+cp ansible/roles/zabbix_server/files/.env.example ansible/roles/zabbix_server/files/.env
 ```
 
 Minimalna konfiguracja:
@@ -101,7 +101,7 @@ MYSQL_DATABASE=zabbix
 
 Uwagi:
 
-- `**/.env` jest ignorowane przez `.gitignore`.
+- `ansible/roles/zabbix_server/files/.env` jest ignorowane przez `.gitignore`.
 - brak pliku przerwie playbook `ansible/playbook.yaml` na tasku kopiowania `.env`.
 
 ### 5.2 `ansible/secrets.yml` (Vault)
@@ -285,14 +285,14 @@ uptime
 ## 10. Znane punkty awarii
 
 - `Vault secret not found`/`Decryption failed`: brak `ansible/secrets.yml` lub bledne haslo Vault.
-- `copy ../docker/.env failed`: brak `docker/.env` lokalnie.
+- `copy .env failed`: brak `ansible/roles/zabbix_server/files/.env` lokalnie.
 - `UNREACHABLE!`: niespojny klucz SSH, zly user, niedostepny host.
 - Zabbix UI na `:80` nie odpowiada: kontenery jeszcze startuja lub blad DB init.
 - Rozjazd IP: `ansible/inventory.ini` nadpisywane przez Terraform, nie edytowac recznie trwale.
 
 ## 11. Bezpieczenstwo operacyjne
 
-- Sekrety trzymaj tylko w `ansible/secrets.yml` (Vault) i lokalnym `docker/.env`.
+- Sekrety trzymaj tylko w `ansible/secrets.yml` (Vault) i lokalnym `ansible/roles/zabbix_server/files/.env`.
 - Nie commituj `terraform/.ssh/`, `ansible/secrets.yml`, `.env`.
 - Ograniczaj publiczny dostep do NSG (obecnie otwarte `22` i `80` globalnie).
 - Po testach usun zasoby, aby uniknac kosztow.
