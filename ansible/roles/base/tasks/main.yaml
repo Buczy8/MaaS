@@ -16,4 +16,3 @@
   loop:
     - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa_m.pub') }}"
     - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa.pub') }}"
-

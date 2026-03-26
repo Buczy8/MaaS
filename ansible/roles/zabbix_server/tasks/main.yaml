@@ -21,5 +21,3 @@
   community.docker.docker_compose_v2:
     project_src: /opt/zabbix
     state: present
-
-
