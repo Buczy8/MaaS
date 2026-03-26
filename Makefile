@@ -11,7 +11,7 @@ ANSIBLE_CFG := $(ANSIBLE_DIR)/ansible.cfg
 ANSIBLE_REQ := $(ANSIBLE_DIR)/requirements.yml
 
 # --- Cele główne (Phony) ---
-.PHONY: help init plan apply provision ansible-deps ansible-check ansible-lint deploy status ping open destroy clean
+.PHONY: help init plan apply provision ansible-deps ansible-check deploy status ping open destroy clean
 
 help:
 	@echo "Dostepne cele:"
@@ -20,7 +20,6 @@ help:
 	@echo "  make apply [AUTO=1]       - Zastosuj zmiany (AUTO=1 zatwierdza automatycznie)"
 	@echo "  make ansible-deps         - Instalacja kolekcji Ansible z requirements.yml"
 	@echo "  make ansible-check        - Sprawdzenie skladni playbooka (wymaga hasla Vault)"
-	@echo "  make ansible-lint         - Lint ról (albo calego playbooka, gdy ustawisz ANSIBLE_VAULT_PASSWORD_FILE)"
 	@echo "  make provision            - Konfiguracja Ansible (wymaga hasła Vault)"
 	@echo "  make deploy               - Full stack: Apply + Provision"
 	@echo "  make status               - Sprawdz IP i polaczenie"
@@ -52,17 +51,6 @@ ansible-deps:
 
 ansible-check:
 	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible-playbook -i $(INVENTORY) $(SITE_PLAY) --syntax-check --ask-vault-pass
-
-ansible-lint:
-	@command -v ansible-lint >/dev/null 2>&1 || { echo "ansible-lint nie jest zainstalowany"; exit 0; }
-	@if [ -n "$$ANSIBLE_VAULT_PASSWORD_FILE" ] && [ -f "$$ANSIBLE_VAULT_PASSWORD_FILE" ]; then \
-		echo "Lint pelnego playbooka z Vault"; \
-		ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible-lint $(SITE_PLAY); \
-	else \
-		echo "Brak ANSIBLE_VAULT_PASSWORD_FILE - lint tylko rol (bez deszyfrowania Vault)"; \
-		ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible-lint $(ANSIBLE_DIR)/roles; \
-		echo "Aby lintowac caly playbook: export ANSIBLE_VAULT_PASSWORD_FILE=/sciezka/do/pliku_hasla"; \
-	fi
 
 ping:
 	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible -i $(INVENTORY) all -m ping
