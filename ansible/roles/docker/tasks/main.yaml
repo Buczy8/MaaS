@@ -1,15 +1,17 @@
 ---
+# 1. Konfiguracja repozytorium Dockera
 - name: Dodanie klucza GPG repozytorium Dockera
   ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/trusted.gpg.d/docker.asc
-    mode: "0644"
+    url: https://download.docker.com/linux/ubuntu/gpg # Oficjalny klucz podpisujacy paczki Dockera.
+    dest: /etc/apt/trusted.gpg.d/docker.asc # Lokalizacja klucza dla APT.
+    mode: "0644" # Odczyt dla systemu, bez prawa zapisu dla innych.
 
 - name: Dodanie oficjalnego repozytorium Dockera
   ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-    state: present
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu jammy stable" # Repo dla Ubuntu 22.04.
+    state: present # Repozytorium ma byc stale skonfigurowane.
 
+# 2. Instalacja komponentow Dockera
 - name: Instalacja Dockera i Compose
   ansible.builtin.apt:
     name:
@@ -18,11 +20,12 @@
       - containerd.io
       - docker-compose-plugin
       - python3-docker
-    state: present
-    update_cache: true
+    state: present # Wymusza instalacje calego zestawu paczek.
+    update_cache: true # Odswieza indeks APT po dodaniu repo.
 
+# 3. Uprawnienia do uruchamiania kontenerow bez sudo
 - name: Dodanie uzytkownika group8 do grupy docker
   ansible.builtin.user:
-    name: group8
-    groups: docker
-    append: true
+    name: group8 # Konto operatora uzywane podczas pracy z VM.
+    groups: docker # Czlonkostwo w grupie daje dostep do /var/run/docker.sock.
+    append: true # Nie nadpisuje pozostalych grup uzytkownika.

@@ -1,4 +1,5 @@
 ---
-zabbix_agent_server: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
-zabbix_agent_server_active: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}"
-zabbix_agent_hostname: group8AgentVM
+# 1. Parametry agenta Zabbix na hoście monitorowanym
+zabbix_agent_server: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}" # Pasywne checki kierowane na prywatny adres serwera Zabbix.
+zabbix_agent_server_active: "{{ hostvars[groups['azure_vm'][0]]['private_ip'] }}" # Aktywne checki i heartbeat rowniez na prywatny adres.
+zabbix_agent_hostname: group8AgentVM # Nazwa hosta widoczna w panelu Zabbix.

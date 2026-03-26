@@ -1,52 +1,55 @@
 ---
+# 1. Instalacja Zabbix Agent 2 z oficjalnego repozytorium
 - name: Pobranie paczki repozytorium Zabbix 7.0
   ansible.builtin.get_url:
-    url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb
-    dest: /tmp/zabbix-release.deb
-    mode: "0644"
+    url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu22.04_all.deb # Repozytorium zgodne z Ubuntu 22.04.
+    dest: /tmp/zabbix-release.deb # Tymczasowy pakiet .deb z definicja repo.
+    mode: "0644" # Odczyt dla APT i systemu.
 
 - name: Instalacja repozytorium Zabbix
   ansible.builtin.apt:
-    deb: /tmp/zabbix-release.deb
+    deb: /tmp/zabbix-release.deb # Rejestruje nowe zrodlo pakietow Zabbixa.
 
 - name: Instalacja Zabbix Agent 2
   ansible.builtin.apt:
-    name: zabbix-agent2
-    state: present
-    update_cache: true
+    name: zabbix-agent2 # Agent monitoringu hosta.
+    state: present # Pakiet ma byc zawsze zainstalowany.
+    update_cache: true # Odswiezenie indeksu po dodaniu repozytorium.
 
+# 2. Konfiguracja polaczenia z serwerem Zabbix
 - name: Konfiguracja adresu serwera Zabbix
   ansible.builtin.lineinfile:
-    path: /etc/zabbix/zabbix_agent2.conf
-    regexp: "^Server="
-    line: "Server={{ zabbix_agent_server }}"
-  notify: Restart zabbix agent service
+    path: /etc/zabbix/zabbix_agent2.conf # Glowny plik konfiguracyjny agenta.
+    regexp: "^Server=" # Aktualizuje tylko linie z lista serwerow pasywnych.
+    line: "Server={{ zabbix_agent_server }}" # Wartosc pobierana z group_vars.
+  notify: Restart zabbix agent service # Restart tylko po zmianie konfiguracji.
 
 - name: Konfiguracja aktywnego serwera Zabbix
   ansible.builtin.lineinfile:
-    path: /etc/zabbix/zabbix_agent2.conf
-    regexp: "^ServerActive="
-    line: "ServerActive={{ zabbix_agent_server_active }}"
-  when: zabbix_agent_server_active is defined
+    path: /etc/zabbix/zabbix_agent2.conf # Ten sam plik konfiguracyjny agenta.
+    regexp: "^ServerActive=" # Ustawienie serwera dla aktywnych checkow.
+    line: "ServerActive={{ zabbix_agent_server_active }}" # Adres serwera aktywnego.
+  when: zabbix_agent_server_active is defined # Task wykonywany tylko gdy zmienna jest zdefiniowana.
   notify: Restart zabbix agent service
 
 - name: Ustawienie nazwy hosta agenta
   ansible.builtin.lineinfile:
-    path: /etc/zabbix/zabbix_agent2.conf
-    regexp: "^Hostname="
-    line: "Hostname={{ zabbix_agent_hostname }}"
-  when: zabbix_agent_hostname is defined
+    path: /etc/zabbix/zabbix_agent2.conf # Ten sam plik konfiguracyjny agenta.
+    regexp: "^Hostname=" # Modyfikuje tylko wpis nazwy hosta.
+    line: "Hostname={{ zabbix_agent_hostname }}" # Nazwa hosta widoczna w UI Zabbix.
+  when: zabbix_agent_hostname is defined # Ustawiane tylko gdy podano zmienna dla hosta.
   notify: Restart zabbix agent service
 
 - name: Dodanie uzytkownika zabbix do grupy docker
   ansible.builtin.user:
-    name: zabbix
-    groups: docker
-    append: true
-  when: zabbix_agent_add_to_docker_group | default(false)
+    name: zabbix # Systemowy uzytkownik agenta.
+    groups: docker # Dostep do metryk kontenerow Docker.
+    append: true # Nie usuwa pozostalych grup uzytkownika.
+  when: zabbix_agent_add_to_docker_group | default(false) # Opcjonalne, wlaczane per host.
 
+# 3. Zapewnienie dzialania uslugi agenta
 - name: Upewnienie sie, ze Zabbix Agent 2 jest wlaczony
   ansible.builtin.systemd:
-    name: zabbix-agent2
-    state: started
-    enabled: true
+    name: zabbix-agent2 # Nazwa uslugi systemowej agenta.
+    state: started # Usluga ma dzialac po zakonczeniu roli.
+    enabled: true # Start automatyczny po restarcie systemu.

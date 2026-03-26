@@ -1,23 +1,25 @@
 ---
+# 1. Przygotowanie plikow wdrozenia Docker Compose
 - name: Utworzenie katalogu dla projektu Zabbix
   ansible.builtin.file:
-    path: /opt/zabbix
-    state: directory
-    mode: "0755"
+    path: /opt/zabbix # Katalog roboczy stosu Zabbix.
+    state: directory # Katalog ma istniec przed kopiowaniem plikow.
+    mode: "0755" # Wlasciciel zapis, pozostali odczyt i wykonanie.
 
 - name: Przeslanie pliku docker-compose
   ansible.builtin.copy:
-    src: docker-compose.yaml
-    dest: /opt/zabbix/docker-compose.yml
-    mode: "0644"
+    src: docker-compose.yaml # Definicja uslug Zabbixa.
+    dest: /opt/zabbix/docker-compose.yml # Docelowa sciezka uruchamiana przez Docker Compose.
+    mode: "0644" # Plik czytelny dla procesu i operatora.
 
 - name: Przeslanie pliku .env z haslami
   ansible.builtin.copy:
-    src: .env
-    dest: /opt/zabbix/.env
-    mode: "0600"
+    src: .env # Sekrety i parametry przekazywane do kontenerow.
+    dest: /opt/zabbix/.env # Plik srodowiskowy wymagany przez compose.
+    mode: "0600" # Ochrona danych wrazliwych (tylko wlasciciel).
 
+# 2. Uruchomienie lub aktualizacja stosu Zabbix
 - name: Uruchomienie infrastruktury Zabbix
   community.docker.docker_compose_v2:
-    project_src: /opt/zabbix
-    state: present
+    project_src: /opt/zabbix # Katalog zawierajacy docker-compose.yml i .env.
+    state: present # Idempotentne uruchomienie/aktualizacja uslug.

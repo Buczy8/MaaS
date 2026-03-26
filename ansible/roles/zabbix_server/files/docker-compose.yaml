@@ -1,42 +1,45 @@
 services:
+  # 1. Baza danych dla komponentow Zabbixa
   zabbix-db:
     image: mysql:8.0
-    command: --log_bin_trust_function_creators=1
+    command: --log_bin_trust_function_creators=1 # Wymagane przez czesc procedur inicjalizacyjnych Zabbixa.
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} # Haslo administratora bazy.
+      - MYSQL_USER=${MYSQL_USER} # Uzytkownik aplikacyjny dla Zabbixa.
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # Haslo uzytkownika aplikacyjnego.
+      - MYSQL_DATABASE=${MYSQL_DATABASE} # Domyslna baza wykorzystywana przez Zabbix.
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:3306:3306" # Dostep do DB tylko lokalnie na hoście.
     volumes:
-      - zabbix-db-data:/var/lib/mysql
+      - zabbix-db-data:/var/lib/mysql # Trwale dane MySQL.
 
+  # 2. Serwer Zabbix przetwarzajacy dane od agentow
   zabbix-server:
     image: zabbix/zabbix-server-mysql:ubuntu-7.0-latest
     environment:
-      - DB_SERVER_HOST=zabbix-db
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - DB_SERVER_HOST=zabbix-db # Nazwa uslugi DB w tej samej sieci Compose.
+      - MYSQL_DATABASE=${MYSQL_DATABASE} # Baza danych dla serwera Zabbix.
+      - MYSQL_USER=${MYSQL_USER} # Uzytkownik DB serwera Zabbix.
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # Haslo uzytkownika DB.
     ports:
-      - "10051:10051"
+      - "10051:10051" # Port serwera Zabbix dla agentow/proxy.
     depends_on:
       - zabbix-db
 
+  # 3. Frontend WWW Zabbix (Nginx + PHP)
   zabbix-web:
     image: zabbix/zabbix-web-nginx-mysql:ubuntu-7.0-latest
     environment:
-      - ZBX_SERVER_HOST=zabbix-server
-      - DB_SERVER_HOST=zabbix-db
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - PHP_TZ=Europe/Warsaw
+      - ZBX_SERVER_HOST=zabbix-server # Adres serwera backendowego w sieci Compose.
+      - DB_SERVER_HOST=zabbix-db # Host bazy danych.
+      - MYSQL_USER=${MYSQL_USER} # Uzytkownik DB dla warstwy web.
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # Haslo DB dla warstwy web.
+      - PHP_TZ=Europe/Warsaw # Strefa czasowa w interfejsie WWW.
     ports:
-      - "80:8080"
+      - "80:8080" # Publiczny dostep HTTP do panelu Zabbixa.
     depends_on:
       - zabbix-server
       - zabbix-db
 
 volumes:
-  zabbix-db-data:
+  zabbix-db-data: # Nazwany wolumen trwalej bazy danych.

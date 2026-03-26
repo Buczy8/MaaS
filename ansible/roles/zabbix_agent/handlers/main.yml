@@ -1,6 +1,7 @@
 ---
+# Handler uruchamiany po zmianach w zabbix_agent2.conf.
 - name: Restart zabbix agent service
   ansible.builtin.systemd:
-    name: zabbix-agent2
-    state: restarted
-    enabled: true
+    name: zabbix-agent2 # Usluga agenta monitoringu.
+    state: restarted # Restart potrzebny do wczytania nowej konfiguracji.
+    enabled: true # Utrzymuje autostart uslugi.

@@ -1,30 +1,32 @@
 ---
+# 1. Instalacja i uruchomienie silnika bazy danych
 - name: Instalacja serwera MariaDB i zaleznosci Python
   ansible.builtin.apt:
     name:
       - mariadb-server
       - python3-pymysql
-    state: present
+    state: present # Instalacja serwera i biblioteki wymaganej przez moduly community.mysql.
 
 - name: Upewnienie sie, ze MariaDB jest uruchomiona
   ansible.builtin.systemd:
-    name: mariadb
-    state: started
-    enabled: true
+    name: mariadb # Nazwa uslugi systemowej MariaDB.
+    state: started # Usluga ma byc aktywna po wykonaniu roli.
+    enabled: true # Start automatyczny po restarcie hosta.
 
 - name: Oczekiwanie na socket MariaDB
   ansible.builtin.wait_for:
-    path: /run/mysqld/mysqld.sock
-    state: present
-    timeout: 30
+    path: /run/mysqld/mysqld.sock # Potwierdza gotowosc lokalnego serwera DB.
+    state: present # Socket musi pojawic sie przed dalsza konfiguracja.
+    timeout: 30 # Maksymalny czas oczekiwania na start uslugi.
 
+# 2. Konto tylko do odczytu metryk dla Zabbixa
 - name: Utworzenie uzytkownika monitorujacego w MariaDB
   community.mysql.mysql_user:
-    name: zbx_monitor
-    password: "{{ pg_monitor_password }}"
-    host: "127.0.0.1"
-    priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW"
-    column_case_sensitive: false
-    state: present
-    login_unix_socket: /run/mysqld/mysqld.sock
-    check_implicit_admin: true
+    name: zbx_monitor # Konto wykorzystywane przez template monitoringu DB.
+    password: "{{ pg_monitor_password }}" # Haslo pobierane z zaszyfrowanych sekretow.
+    host: "127.0.0.1" # Dostep ograniczony do polaczen lokalnych.
+    priv: "*.*:REPLICATION CLIENT,PROCESS,SHOW DATABASES,SLAVE MONITOR,SHOW VIEW" # Minimalny zestaw uprawnien diagnostycznych.
+    column_case_sensitive: false # Zgodnosc z roznymi wersjami/kolacjami silnika.
+    state: present # Uzytkownik ma istniec po kazdym uruchomieniu playbooka.
+    login_unix_socket: /run/mysqld/mysqld.sock # Logowanie administracyjne przez socket lokalny.
+    check_implicit_admin: true # Pozwala skorzystac z lokalnych uprawnien root bez hasla.
