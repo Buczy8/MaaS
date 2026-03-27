@@ -1,0 +1,109 @@
+---
+# 1. Czekamy, az interfejs WWW i API Zabbixa wstana po uruchomieniu Dockera
+- name: Oczekiwanie na dostepnosc Zabbix API
+  ansible.builtin.wait_for:
+    host: 127.0.0.1 # API wystawione lokalnie przez kontener zabbix-web.
+    port: 80 # Port HTTP frontendu Zabbix.
+    delay: 15 # Krotkie opoznienie na start kontenerow po compose up.
+    timeout: 300 # Maksymalny czas oczekiwania na gotowosc API.
+
+- name: Oczekiwanie na pelna gotowosc Zabbix API i bazy danych
+  ansible.builtin.uri:
+    url: >-
+      http{{ (zabbix_httpapi_use_ssl | default(false) | bool) | ternary('s', '') }}://127.0.0.1:{{ zabbix_httpapi_port }}{{ ((zabbix_url_path | default('') | trim('/')) | length > 0) | ternary('/' ~ (zabbix_url_path | default('') | trim('/')), '') }}/api_jsonrpc.php
+    method: POST
+    headers:
+      Content-Type: application/json-rpc
+    body_format: json
+    body:
+      jsonrpc: "2.0"
+      method: "user.login"
+      params:
+        username: "{{ zabbix_api_user }}"
+        password: "{{ zabbix_api_password }}"
+      id: 1
+  register: zabbix_login_probe
+  changed_when: false # To tylko probe readiness, bez zmian konfiguracyjnych.
+  retries: 30 # Pierwsza inicjalizacja schematu DB Zabbix potrafi trwac kilka minut.
+  delay: 10
+  until:
+    - zabbix_login_probe.status == 200
+    - zabbix_login_probe.json is defined
+    - zabbix_login_probe.json.result is defined
+  no_log: true # Ukrywa dane logowania API w outputcie Ansible.
+
+# 2. Rejestracja i aktualizacja hostow przez API Zabbix
+
+- name: Pobierz wartosc MYSQL_PASSWORD z pliku .env
+  ansible.builtin.shell: grep '^MYSQL_PASSWORD=' /opt/zabbix/.env | cut -d '=' -f2 # Odczyt hasla DB przekazywanego do makra hosta "Zabbix server".
+  register: zabbix_db_password # Zmienna wykorzystywana pozniej w {$MYSQL.PASSWORD}.
+  changed_when: false # Odczyt pliku nie powinien byc raportowany jako zmiana.
+
+- name: Zarzadzanie hostami w Zabbix API
+  become: false # Taski API nie wymagaja sudo; unikamy bledu "sudo: wymagane jest haslo".
+  vars:
+    ansible_connection: httpapi # Przelaczenie z SSH na transport API Zabbix.
+    ansible_network_os: community.zabbix.zabbix # Plugin HTTPAPI kolekcji community.zabbix.
+    ansible_user: "{{ zabbix_api_user }}" # Login do API Zabbix.
+    ansible_httpapi_pass: "{{ zabbix_api_password }}" # Haslo API z secrets.yml.
+    ansible_httpapi_port: "{{ zabbix_httpapi_port }}" # Port API (u nas 80).
+    ansible_httpapi_use_ssl: "{{ zabbix_httpapi_use_ssl }}" # HTTP/HTTPS dla API.
+    ansible_httpapi_validate_certs: "{{ zabbix_httpapi_validate_certs }}" # Walidacja certyfikatow TLS.
+    ansible_zabbix_url_path: "{{ zabbix_url_path }}" # Prefiks URL WebUI, np. "zabbix" albo pusty string.
+  block:
+    - name: Konfiguracja group8AgentVM w Zabbix Server
+      community.zabbix.zabbix_host:
+        host_name: "group8AgentVM"
+        visible_name: "group8AgentVM"
+        host_groups:
+          - "Linux servers"
+          - "Databases"
+        link_templates:
+          - "Linux by Zabbix agent"
+          - "Nginx by Zabbix agent"
+          - "MySQL by Zabbix agent 2"
+        interfaces:
+          - type: 1
+            main: 1
+            useip: 1
+            ip: "{{ hostvars[groups['agent_vm'][0]]['private_ip'] }}" # Adres 10.0.1.4 z inventory
+            dns: ""
+            port: "10050"
+        macros:
+          - macro: "{$MYSQL.DSN}"
+            value: "tcp://localhost:3306"
+          - macro: "{$MYSQL.USER}"
+            value: "zbx_monitor"
+          - macro: "{$MYSQL.PASSWORD}"
+            value: "{{ pg_monitor_password }}" # Zmienna odczytana z secrets.yml (Vault)
+        state: present
+
+    - name: Aktualizacja wbudowanego hosta Zabbix server (serwer w Dockerze, agent na hoście)
+      community.zabbix.zabbix_host:
+        host_name: "Zabbix server" # Aktualizujemy DOKŁADNIE ten wbudowany host
+        visible_name: "Zabbix server"
+        host_groups:
+          - "Zabbix servers"
+          - "Databases"
+        link_templates:
+          - "Linux by Zabbix agent"     # Standardowy monitoring systemu
+          - "Zabbix server health"      # Wbudowany monitoring silnika Zabbix
+          - "MySQL by Zabbix agent 2"   # Zbieranie metryk z kontenera zabbix-db
+        interfaces:
+          - type: 1
+            main: 1
+            useip: 1
+            ip: "{{ private_ip }}"       # Prywatny adres hosta jest stabilnie osiagalny z kontenera zabbix-server.
+            dns: ""
+            port: "10050"
+        macros:
+          # Baza Zabbixa wystawia port na localhost maszyny głównej, agent łączy się lokalnie
+          - macro: "{$MYSQL.DSN}"
+            value: "tcp://127.0.0.1:3306"
+          # Użytkownik bazy zadeklarowany w pliku docker-compose.yaml (.env)
+          - macro: "{$MYSQL.USER}"
+            value: "zabbix"
+          # Hasło bazy danych - tutaj podaj hasło, które masz wpisane w pliku .env w zmiennej MYSQL_PASSWORD
+          - macro: "{$MYSQL.PASSWORD}"
+            value: "{{ zabbix_db_password.stdout }}"
+        state: present

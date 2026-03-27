@@ -57,7 +57,7 @@ provision:
 	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible-playbook -i $(INVENTORY) $(SITE_PLAY) --ask-vault-pass
 
 ansible-deps:
-	ansible-galaxy collection install -r $(ANSIBLE_REQ)
+	ansible-galaxy collection install -r $(ANSIBLE_REQ) --force
 
 ansible-check:
 	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible-playbook -i $(INVENTORY) $(SITE_PLAY) --syntax-check --ask-vault-pass
