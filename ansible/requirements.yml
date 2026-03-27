@@ -3,4 +3,7 @@
 collections:
   - name: ansible.posix # authorized_key i inne moduly systemowe POSIX.
   - name: community.docker # Uruchamianie i zarzadzanie Docker Compose v2.
+    version: "3.7.0" # 5.x wymaga ansible-core >=2.17; ten projekt ma 2.16.3.
   - name: community.mysql # Konfiguracja uzytkownikow i uprawnien MariaDB/MySQL.
+  - name: community.zabbix # Moduly API Zabbix (host, templates, grupy).
+    version: "4.1.1"

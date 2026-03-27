@@ -2,3 +2,11 @@
 # 1. Parametry agenta Zabbix na serwerze centralnym
 zabbix_agent_server: "127.0.0.1,172.16.0.0/12" # Dopuszcza lokalny serwer i ruch z prywatnej podsieci VNet.
 zabbix_agent_add_to_docker_group: true # Pozwala template'om Dockera odczytywac metryki kontenerow.
+
+# 2. Parametry dostepu do API Zabbix (wykorzystywane przez role zabbix_config)
+zabbix_api_user: "Admin" # Uzytkownik API wykorzystywany przez community.zabbix.zabbix_host.
+zabbix_httpapi_port: 80 # Port frontendu/API Zabbix dostepny na hoście centralnym.
+zabbix_httpapi_use_ssl: false # HTTP w labie; ustaw true po wlaczeniu HTTPS.
+zabbix_httpapi_validate_certs: false # Walidacja certyfikatow TLS (przy self-signed zwykle false).
+zabbix_url_path: "" # Dla obrazu zabbix-web endpoint API jest pod /api_jsonrpc.php (bez prefiksu /zabbix).
+

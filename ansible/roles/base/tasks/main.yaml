@@ -18,3 +18,14 @@
   loop:
     - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa_m.pub') }}" # Klucz dodatkowego operatora.
     - "{{ lookup('file', playbook_dir + '/../terraform/.ssh/others/id_rsa.pub') }}" # Klucz glowny operatora.
+
+- name: Instalacja pip dla modulu Zabbix
+  ansible.builtin.apt:
+    name: python3-pip
+    state: present
+    update_cache: true
+
+- name: Instalacja biblioteki zabbix-api
+  ansible.builtin.pip:
+    name: zabbix-api
+    state: present
