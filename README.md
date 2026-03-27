@@ -19,8 +19,9 @@ Topologia:
 Kolejnosc uruchomienia (`make deploy`):
 
 1. `terraform init` i `terraform apply` tworza zasoby oraz generuja `ansible/inventory.ini`.
-2. `ansible/playbook.yaml` uruchamia role `base`, `docker`, `zabbix_server`, `zabbix_agent`, `nginx`, `mariadb` dla odpowiednich grup (`azure_vm`, `agent_vm`) i uzywa sekretu `pg_monitor_password` z Vault.
+2. `ansible/playbook.yaml` uruchamia role `base`, `docker`, `zabbix_server`, `zabbix_agent`, `zabbix_config`, `nginx`, `mariadb` dla odpowiednich grup (`azure_vm`, `agent_vm`) i uzywa sekretow `pg_monitor_password` oraz `zabbix_api_password` z Vault.
 3. Rola `zabbix_server` kopiuje `ansible/roles/zabbix_server/files/docker-compose.yaml` oraz `ansible/roles/zabbix_server/files/.env` na host glowny i uruchamia stack kontenerow, a `zabbix_agent` konfiguruje natywnego agenta.
+4. Rola `zabbix_config` czeka na pelna gotowosc API/DB Zabbixa i automatycznie tworzy/aktualizuje hosty monitorowane przez API.
 4. `make open` probuje otworzyc `http://<public_ip_address>` z outputu Terraform.
 
 Istotne zaleznosci:
@@ -39,7 +40,7 @@ Istotne zaleznosci:
 - `ansible/playbook.yaml` - glowny playbook uruchamiajacy role dla obu VM.
 - `ansible/ansible.cfg` - lokalna konfiguracja Ansible (inventory, roles_path, SSH).
 - `ansible/requirements.yml` - kolekcje Ansible wymagane przez role.
-- `ansible/group_vars/azure_vm.yml` - zmienne `zabbix_agent` dla hosta glownego.
+- `ansible/group_vars/azure_vm.yml` - zmienne `zabbix_agent` oraz `httpapi` dla roli `zabbix_config`.
 - `ansible/group_vars/agent_vm.yml` - zmienne `zabbix_agent` dla hosta monitorowanego.
 - `ansible/roles/base/tasks/main.yaml` - wspolne taski bazowe (pakiety + klucze SSH).
 - `ansible/roles/docker/tasks/main.yaml` - instalacja Dockera i Compose na `azure_vm`.
@@ -61,11 +62,16 @@ Niezbedne narzedzia lokalnie:
 - `az` (Azure CLI)
 - `ssh-keygen`
 
-Wymagane kolekcje Ansible:
+Wymagane kolekcje Ansible (wersje przypiete dla powtarzalnosci):
 
 ```bash
 ansible-galaxy collection install -r ansible/requirements.yml
 ```
+
+Aktualny zestaw zaklada:
+
+- `community.docker==3.7.0` (kompatybilne z `ansible-core 2.16.x`),
+- `community.zabbix==4.1.1` (kompatybilne z Zabbix 7.0 API).
 
 Możesz tez uzyc celu Makefile:
 
@@ -119,6 +125,13 @@ Edycja zaszyfrowanego pliku:
 ansible-vault edit ansible/secrets.yml
 ```
 
+Minimalne sekrety wymagane przez playbook:
+
+```yaml
+pg_monitor_password: "<haslo_uzytkownika_mysql_monitoring>"
+zabbix_api_password: "<haslo_uzytkownika_api_zabbix>"
+```
+
 `make provision` uruchamia playbook z `--ask-vault-pass`, wiec haslo Vault jest wymagane interaktywnie.
 
 ## 6. SSH i klucze
@@ -164,30 +177,24 @@ make open
 make deploy
 ```
 
-## 8. Konfiguracja Zabbixa (UI po wdrozeniu)
+## 8. Konfiguracja Zabbixa po wdrozeniu
 
 Po `make deploy` panel powinien otworzyc sie automatycznie (`make deploy` zawiera `make open`).
-Nastepnie wykonaj konfiguracje hosta monitorowanego w panelu Zabbix.
+Konfiguracja hostow jest wykonywana automatycznie przez role `zabbix_config`.
 
-1. Jesli panel nie otworzy sie sam, wejdz recznie na `http://<public_ip_glownej_vm>` i zaloguj sie do Zabbixa.
-2. Przejdz do `Data collection -> Hosts -> Create host`.
-3. Ustaw podstawowe pola:
-   - `Host name`: `group8AgentVM`
-   - `Visible name`: `group8AgentVM`
-   - `Host groups`: dodaj docelowe grupy (np. `Linux servers`, `Databases`, `Web servers`).
-4. W sekcji `Interfaces` dodaj/edytuj interfejs `Agent`:
-   - `IP address`: `10.0.1.4`
-   - `Port`: `10050`
-   - `Connect to`: `IP`
-5. W sekcji `Templates` podlinkuj:
-   - `Linux by Zabbix agent`
-   - `Nginx by Zabbix agent`
-   - `MySQL by Zabbix agent 2`
-6. W sekcji `Macros` dodaj makra MySQL:
-   - `{$MYSQL.DSN}` = `tcp://localhost:3306`
-   - `{$MYSQL.USER}` = `zbx_monitor`
-   - `{$MYSQL.PASSWORD}` = `<haslo_uzytkownika_mysql>`
-7. Zapisz hosta i sprawdz dane w `Monitoring -> Latest data`.
+Rola ustawia m.in.:
+
+- host `group8AgentVM` (interfejs na prywatnym IP `agent_vm`),
+- host `Zabbix server` (interfejs na prywatnym IP `azure_vm`),
+- grupy hostow i template'y,
+- makra `{$MYSQL.*}` dla monitoringu MySQL.
+
+Szybka walidacja po provisioning:
+
+1. Wejdz na `http://<public_ip_glownej_vm>` i zaloguj sie do Zabbixa.
+2. Przejdz do `Data collection -> Hosts` i sprawdz, czy `group8AgentVM` oraz `Zabbix server` maja status `Enabled`.
+3. Dla hosta z chwilowym `Not available` kliknij `Check now` i odczekaj ~1 minute (agent i server potrzebuja czasu po restarcie).
+4. Sprawdz metryki w `Monitoring -> Latest data`.
 
 Mapowanie IP i grup z infrastruktury:
 
@@ -288,6 +295,8 @@ uptime
 - `copy .env failed`: brak `ansible/roles/zabbix_server/files/.env` lokalnie.
 - `UNREACHABLE!`: niespojny klucz SSH, zly user, niedostepny host.
 - Zabbix UI na `:80` nie odpowiada: kontenery jeszcze startuja lub blad DB init.
+- `dbversion table was not found`: API startuje szybciej niz inicjalizacja DB; rola `zabbix_config` ma retry, ale przy pierwszym starcie moze to wydluzyc provisioning.
+- `[WARNING] Collection community.docker does not support Ansible version ...`: sprawdz, czy kolekcje sa zainstalowane z `ansible/requirements.yml` (w tym repo przypieta jest wersja `3.7.0`).
 - Rozjazd IP: `ansible/inventory.ini` nadpisywane przez Terraform, nie edytowac recznie trwale.
 
 ## 11. Bezpieczenstwo operacyjne
