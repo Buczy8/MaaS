@@ -314,3 +314,7 @@ make destroy CONFIRM=YES AUTO=1
 
 Komenda usuwa zasoby Terraform utworzone w Azure.
 
+## 13. Autorzy
+
+- Paweł Buczek
+- Michał Brzeźinski
